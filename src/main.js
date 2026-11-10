@@ -55,7 +55,26 @@ function createWindow() {
   win.webContents.on('will-navigate', e => e.preventDefault());
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(() => { createWindow(); if (process.env.SERMON_SHORTS_SMOKE) smoke(process.env.SERMON_SHORTS_SMOKE); });
+
+/** 배포 전 자동 점검(CI의 Windows·Mac에서 실행): 화면 스크립트가 도는지 + 시험 영상으로 쇼츠 한 편 렌더 → 결과 JSON 저장 후 종료 */
+async function smoke(outFile) {
+  const r = { ok: false, steps: [] };
+  try {
+    await new Promise(res => win.webContents.once('did-finish-load', res));
+    r.steps.push('renderer:' + await win.webContents.executeJavaScript("typeof loadSettings === 'function' && typeof window.api === 'object'"));
+    const dir = await tmpDir();
+    const src = path.join(dir, 'test.mp4');
+    await ffmpeg(['-y', '-f', 'lavfi', '-i', 'testsrc2=s=1280x720:r=30:d=20', '-f', 'lavfi', '-i', 'sine=f=330:d=20', '-c:v', 'libx264', '-preset', 'ultrafast', '-c:a', 'aac', '-shortest', src]);
+    r.steps.push('testvideo');
+    const out = await renderClip({ src, clip: { start: 2, end: 12, hook: '점검 쇼츠 한글 제목', captions: [{ s: 0, e: 3, text: '하나님은 지금도\n일하십니다' }] }, church: '동역교회', ending: '주일 오전 11시', layout: 'fill', pos: 0.5, withEnding: true, outDir: dir, index: 0 });
+    const info = await probe(out);
+    r.steps.push(`render:${info.width}x${info.height}:${info.duration}`);
+    r.ok = r.steps[0] === 'renderer:true' && info.width === 1080 && info.height === 1920 && Math.abs(info.duration - 12.5) < 0.3;
+  } catch (e) { r.error = String(e.message || e); }
+  await fs.writeFile(outFile, JSON.stringify(r));
+  app.exit(r.ok ? 0 : 1);
+}
 app.on('window-all-closed', () => app.quit());
 
 // ---------- 설정 ----------
@@ -144,7 +163,8 @@ ipcMain.handle('meta', async (_e, { clip, church }) => {
 });
 
 // ---------- 렌더 ----------
-ipcMain.handle('render', async (_e, { src, clip, church, ending, layout, pos, withEnding, outDir, index }) => {
+ipcMain.handle('render', (_e, o) => renderClip(o));
+async function renderClip({ src, clip, church, ending, layout, pos, withEnding, outDir, index }) {
   const dir = await tmpDir();
   try {
     await fs.mkdir(path.join(dir, 'fonts'));
@@ -157,7 +177,7 @@ ipcMain.handle('render', async (_e, { src, clip, church, ending, layout, pos, wi
     await ffmpeg(L.renderArgs({ src, start: clip.start, end: clip.end, layout, pos, ending: withEnding, out }), { cwd: dir, onTime: t => send('progress', { stage: 'render', index, ratio: t / total }) });
     return out;
   } finally { fs.rm(dir, { recursive: true, force: true }).catch(() => {}); }
-});
+}
 
 ipcMain.handle('reveal', (_e, file) => shell.showItemInFolder(file));
 ipcMain.handle('open-url', (_e, url) => { if (/^https:\/\/(aistudio\.google\.com|github\.com|hyotowork-create\.github\.io)\//.test(url)) shell.openExternal(url); });
