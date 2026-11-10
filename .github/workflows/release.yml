@@ -54,13 +54,14 @@ jobs:
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
       # 배포 전 점검: 빌드된 앱을 실제로 띄워 화면 스크립트 확인 + 시험 쇼츠 한 편 렌더(1080x1920, 12.5초). 실패하면 릴리스하지 않음
       - name: Smoke test (packaged app)
+        timeout-minutes: 5
         shell: bash
         run: |
           if [ "$RUNNER_OS" = Windows ]; then APP="release/win-unpacked/Sermon Shorts.exe";
           elif [ "${{ matrix.arch }}" = arm64 ]; then APP="release/mac-arm64/Sermon Shorts.app/Contents/MacOS/Sermon Shorts";
           else APP="release/mac/Sermon Shorts.app/Contents/MacOS/Sermon Shorts"; fi
           OUT="$RUNNER_TEMP/smoke.json"
-          SERMON_SHORTS_SMOKE="$OUT" timeout 240 "$APP" || true
+          SERMON_SHORTS_SMOKE="$OUT" "$APP" || true
           cat "$OUT"
           grep -q '"ok":true' "$OUT"
       # 자동 업데이트 파일(latest*.yml)은 쓰지 않으므로 설치 파일만 올림(두 맥 작업이 같은 파일을 겹쳐 올리는 문제 피함)
