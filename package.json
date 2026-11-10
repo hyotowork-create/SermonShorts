@@ -1,0 +1,25 @@
+{
+  "name": "sermon-shorts",
+  "version": "0.1.0",
+  "description": "Sermon Shorts — 설교 영상에서 좋은 대목을 골라 세로 쇼츠로 만드는 데스크톱 앱",
+  "author": "Sermon Shorts",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hyotowork-create/SermonShorts.git"
+  },
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "node --test test/",
+    "build:mac": "electron-builder --mac",
+    "build:win": "electron-builder --win"
+  },
+  "dependencies": {
+    "ffmpeg-static": "^5.3.0"
+  },
+  "devDependencies": {
+    "electron": "^45.2.3",
+    "electron-builder": "^26.18.0"
+  }
+}

@@ -1,0 +1,49 @@
+appId: kr.dongyeok.sermonshorts
+productName: Sermon Shorts
+artifactName: Sermon-Shorts-${version}-${arch}.${ext}
+copyright: Copyright © Sermon Shorts
+afterPack: scripts/adhoc-sign.cjs
+afterSign: scripts/mac-verify.cjs
+
+publish:
+  provider: github
+  owner: hyotowork-create
+  repo: SermonShorts
+
+directories:
+  output: release
+  buildResources: build
+
+files:
+  - src/**/*
+  - resources/**/*
+  - package.json
+  - "!**/*.map"
+
+# asar 안의 실행 파일은 못 돌리므로 ffmpeg는 밖으로
+asarUnpack:
+  - "**/node_modules/ffmpeg-static/**"
+
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  shortcutName: Sermon Shorts
+  artifactName: Sermon-Shorts-Setup-${version}.${ext}
+
+portable:
+  artifactName: Sermon-Shorts-${version}-portable.${ext}
+
+mac:
+  target:
+    - target: dmg
+  category: public.app-category.video
+  hardenedRuntime: true

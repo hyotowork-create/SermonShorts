@@ -1,0 +1,64 @@
+name: Release (Windows + macOS)
+
+# v* 태그를 올리면 Windows(설치판·Portable)와 Mac(Apple Silicon·Intel) 파일을 만들어 Releases에 올린다
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm ci --ignore-scripts
+      - run: npm test
+
+  release:
+    needs: test
+    strategy:
+      max-parallel: 1 # 같은 릴리스에 동시에 올리면 충돌
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: --win --x64
+            arch: x64
+          - os: macos-14
+            args: --mac --arm64
+            arch: arm64
+          - os: macos-14
+            args: --mac --x64
+            arch: x64   # 인텔 맥: ffmpeg도 x64로 받음
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm }
+      - name: Install (ffmpeg는 만들 대상 아키텍처로)
+        run: npm ci
+        env:
+          npm_config_arch: ${{ matrix.arch }}
+      - name: ffmpeg 확인
+        shell: bash
+        run: file node_modules/ffmpeg-static/ffmpeg* || true
+      - name: Build
+        shell: bash
+        run: npx electron-builder ${{ matrix.args }} --publish never
+        env:
+          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+      # 자동 업데이트 파일(latest*.yml)은 쓰지 않으므로 설치 파일만 올림(두 맥 작업이 같은 파일을 겹쳐 올리는 문제 피함)
+      - name: Upload to release
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF_NAME}"
+          gh release view "$TAG" >/dev/null 2>&1 || gh release create "$TAG" --title "Sermon Shorts ${TAG#v}" --notes "설치 방법·경고 대처는 README를 보세요." --prerelease
+          shopt -s nullglob
+          gh release upload "$TAG" release/*.dmg release/*.exe --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

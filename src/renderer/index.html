@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; media-src file:; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'none'">
+<title>Sermon Shorts</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="logo">▶</span><b>Sermon Shorts</b><span class="beta">시험판</span></div>
+  <p class="tag">설교 영상에서 좋은 대목을 골라 세로 쇼츠로</p>
+  <button id="openSettings" class="btn ghost">설정</button>
+</header>
+
+<main>
+  <section class="card" id="step1">
+    <h2><span class="n">1</span>설교 영상</h2>
+    <div class="row">
+      <button id="pick" class="btn main">설교 영상 고르기</button>
+      <span id="videoInfo" class="muted">mp4·mov 등 교회가 가진 원본 영상 파일</span>
+    </div>
+    <label class="consent"><input type="checkbox" id="consent"> 우리 교회의 설교 영상이고, 설교자에게 쇼츠 제작 동의를 받았습니다.</label>
+    <button id="analyze" class="btn main" disabled>좋은 대목 찾기</button>
+    <div class="progress hidden" id="prog"><div id="bar"></div></div>
+    <p id="status" class="muted" aria-live="polite"></p>
+  </section>
+
+  <section class="card hidden" id="step2">
+    <h2><span class="n">2</span>대목 다듬기 <small id="sermonTitle" class="muted"></small></h2>
+    <p class="muted">대목마다 「자막 만들기」를 누른 뒤 글자를 확인해 주세요. AI 자막은 틀릴 수 있습니다. 미리보기는 실제 쇼츠와 같은 모양입니다.</p>
+    <div id="clips"></div>
+  </section>
+
+  <section class="card hidden" id="step3">
+    <h2><span class="n">3</span>쇼츠 만들기</h2>
+    <div class="row">
+      <label>화면 <select id="layout"><option value="fill">꽉 채우기(설교자 중심으로 자름)</option><option value="blur">원본 그대로 + 흐린 배경</option></select></label>
+      <label class="chk"><input type="checkbox" id="withEnding" checked> 마지막에 교회 안내 장면(2.5초)</label>
+    </div>
+    <div class="row">
+      <button id="outDirBtn" class="btn ghost">저장 폴더</button><span id="outDir" class="muted"></span>
+    </div>
+    <button id="render" class="btn main">선택한 쇼츠 만들기</button>
+    <ul id="results" class="results"></ul>
+  </section>
+</main>
+
+<pre id="log" class="log" aria-live="polite"></pre>
+
+<dialog id="settings">
+  <form method="dialog" class="settings">
+    <h2>설정</h2>
+    <label>Gemini API 키 <input type="password" id="key" placeholder="저장된 키가 있으면 비워 두세요" autocomplete="off"></label>
+    <p class="muted small">키가 없으면 <a href="#" id="keyLink">Google AI Studio</a>에서 무료로 만들 수 있습니다. 키는 이 컴퓨터의 보안 저장소에 암호화해 보관하고, 설교 음성은 Google Gemini로만 갑니다.</p>
+    <label>교회 이름 <input type="text" id="church" maxlength="40" placeholder="예: 동역교회"></label>
+    <label>안내 문구(마지막 장면) <input type="text" id="ending" maxlength="60" placeholder="예: 주일 오전 11시 · 서울 마포구"></label>
+    <div class="row end"><button class="btn ghost" value="cancel">닫기</button><button class="btn main" id="saveSettings" value="save">저장</button></div>
+  </form>
+</dialog>
+
+<template id="clipTpl">
+  <article class="clip">
+    <div class="phone"><video preload="metadata" muted playsinline></video><div class="ov-church"></div><div class="ov-hook"></div><div class="ov-cap"></div></div>
+    <div class="edit">
+      <div class="row between"><label class="chk"><input type="checkbox" class="use" checked> <b class="idx"></b></label><span class="why muted small"></span></div>
+      <label>위쪽 제목 <input type="text" class="hook" maxlength="30"></label>
+      <div class="row times">
+        <label>시작 <input type="text" class="start"></label>
+        <button class="btn tiny" data-d="start:-1">−1초</button><button class="btn tiny" data-d="start:1">+1초</button>
+        <label>끝 <input type="text" class="end"></label>
+        <button class="btn tiny" data-d="end:-1">−1초</button><button class="btn tiny" data-d="end:1">+1초</button>
+        <span class="len muted small"></span>
+      </div>
+      <label class="posWrap">화면 위치 <input type="range" class="pos" min="0" max="1" step="0.01" value="0.5"></label>
+      <div class="row"><button class="btn ghost play">▶ 미리보기</button><button class="btn ghost mkCap">자막 만들기</button><button class="btn ghost mkMeta">업로드 문안</button></div>
+      <textarea class="caps hidden" rows="7" spellcheck="false" aria-label="자막(한 줄에 시작초 끝초 글자)"></textarea>
+      <p class="capHelp muted small hidden">한 줄에 「시작초 끝초 자막」. 두 줄 자막은 글자 안에 / 를 넣으세요.</p>
+      <div class="meta hidden"></div>
+    </div>
+  </article>
+</template>
+
+<script src="renderer.js"></script>
+</body>
+</html>
